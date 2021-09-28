@@ -1,0 +1,195 @@
+.nav-bar {
+    list-style-type: none;
+    margin: 0;
+    padding: 0;
+    width: 100%;
+    background-color: #444444;
+    text-align: center;
+}
+
+.nav-bar li {
+    display: inline-block;
+}
+
+.nav-bar a {
+    display: block;
+    color: #eeeeee;
+    text-decoration: none;
+    padding: 15px 30px;
+    outline: none;
+}
+
+.nav-bar a:hover,
+.nav-bar a:focus,
+.nav-bar a:active {
+    background-color: #333333;
+}
+
+.center-div {
+    text-align: center;
+}
+
+.info-div {
+    background-color: #5e4c70;
+    border: 1px solid #eeeeee;
+    border-radius: 8px;
+    display: block;
+    width: 500px;
+    margin: 50px auto;
+}
+
+.info-div h1 {
+    text-align: center;
+}
+
+.info-inner {
+    margin: 30px 40px;
+}
+
+.scrollable-text {
+	display: inline-block;
+    box-sizing: border-box;
+	width: 100%;
+	overflow-y: hidden;
+	white-space: nowrap;
+}
+
+form .input-div {
+    margin: 25px 0;
+}
+
+form .input-div label {
+    display: block;
+    margin: 10px 0;
+    user-select: none;
+}
+
+form .input-div .inline-label {
+    display: inline-block;
+}
+
+.error-message {
+    display: block;
+    margin: 5px 0;
+    color: #ff0037;
+    user-select: none;
+}
+
+form .input-div input[type=text],
+form .input-div input[type=email],
+form .input-div input[type=number],
+form .input-div input[type=password],
+form .input-div select {
+    display: block;
+    box-sizing: border-box;
+    width: 100%;
+    padding: 10px;
+    font-size: 1em;
+}
+
+form .input-div input[type=checkbox] {
+    margin: 15px 15px 15px 0;
+    width: 16px;
+    height: 16px;
+}
+
+button {
+    box-sizing: border-box;
+    padding: 10px 30px;
+    font-weight: bold;
+    border: none;
+    border-radius: 5px;
+    background-color: #333333;
+    color: #eeeeee;
+    font-size: 0.9em;
+    cursor: pointer;
+}
+
+button:focus,
+button:hover,
+button:active {
+    background-color: #444444;
+}
+
+.caution-button {
+    background-color: #8D2929;
+}
+
+.caution-button:focus,
+.caution-button:hover,
+.caution-button:active {
+    background-color: #b63636;
+}
+
+form details {
+    margin: 50px 0;
+}
+
+details[open] summary ~ * {
+    margin-left: 20px;
+}
+
+summary {
+    cursor: pointer;
+    outline: none;
+    font-weight: bold;
+}
+
+.flex-row-reverse {
+    display: flex;
+    flex-direction: row-reverse;
+}
+
+.flex-grow-1 {
+    flex-grow: 1;
+}
+
+.align-right {
+    text-align: right;
+}
+
+.users-div {
+    margin: 40px;
+}
+
+.users-div .two-col-grid {
+    padding: 40px 0;
+    border-top: 2px solid white;
+    border-bottom: 2px solid white;
+}
+
+.two-col-grid {
+    margin: 30px 0;
+    display: grid; 
+    grid-template-columns: auto 1fr;
+    row-gap: 20px;
+    column-gap: 20px;
+}
+
+.two-col-grid label {
+    font-weight: bold;
+}
+
+.profile-div details {
+    margin: 20px 0;
+}
+
+.button-div {
+    margin: 30px 0;
+}
+
+.link-button {
+    text-decoration: none;
+    display: inline-block;
+    padding: 10px 10px;
+    font-weight: bold;
+    border-radius: 5px;
+    color: #95bfff;
+    font-size: 0.9em;
+}
+
+.link-button:focus,
+.link-button:hover,
+.link-button:active {
+    background-color: #ffffff33;
+}

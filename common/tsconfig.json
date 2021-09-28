@@ -1,0 +1,12 @@
+{
+    "compilerOptions": {
+        "module": "commonjs",
+        "lib": ["esnext"],
+        "declaration": true, 
+        "declarationMap": true,
+        "rootDir": "./src",
+        "outDir": "./build",
+        "composite": true,
+    },
+    "references": []
+}
