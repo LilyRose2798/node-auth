@@ -1,10 +1,12 @@
 import dotenv from "dotenv"
 import { Router, Response, RequestHandler } from "express"
+import { Session, SessionData } from "express-session"
 import { UserModel } from "./UserModel"
 import { APIResponse, SuccessResponse, ErrorResponse, UserPublicData, UserPrivateData, UsersPublicData, UserAuthenticateData, APIRouteSpec, QueryOrEmpty, RequestRoute, ResponseOrEmpty, ParamRoute, APIMethodSpec, Route } from "../../common/build/API"
 import { PAGE_SIZE } from "../../common/build/constants"
 import { User } from "../../common/build/User"
 import { processErrors, usersQueryValidator, userCreateValidator, userReplaceValidator, userUpdateValidator, userAuthenticateValidator } from "./validators"
+import { ValidateFunction } from "ajv"
 
 declare module "express-session" {
     interface SessionData {
@@ -63,11 +65,16 @@ const deleteUserById = async (res: Response<APIResponse<UserPrivateData>>, userI
     return res.send(createSuccessResponse<UserPrivateData>("User deleted successfully", { user: userDoc.toPrivate() }))
 }
 
+const isAuthenticated = (session: Session & Partial<SessionData>): boolean => session.userId !== undefined
+const isAuthenticatedAsUser = (session: Session & Partial<SessionData>, userId: string): boolean => session.userId === userId
+const sendAuthenticationError = <T>(res: Response<APIResponse<T>>) => res.status(401).send(createErrorResponse("Not authenticated"))
+const sendValidationError = <T>(res: Response<APIResponse<T>>, validator: ValidateFunction) => res.status(400).send(createErrorResponse(processErrors(validator.errors)))
+
 const apiRouteHandlers: APIRouteHandlerSpec = {
     "/users": {
         methodHandlers: {
             "GET": async ({ query }, res) => {
-                if (!usersQueryValidator(query)) return res.status(400).send(createErrorResponse(processErrors(usersQueryValidator.errors)))
+                if (!usersQueryValidator(query)) return sendValidationError(res, usersQueryValidator)
                 const { page = 1, limit = PAGE_SIZE, sort, ...usersQuery } = query
                 const sorts: [string, number][] = sort?.split(",").map(x =>
                     x.startsWith("+") || x.startsWith(" ") ? [x.slice(1), 1] : x.startsWith("-") ? [x.slice(1), -1] : [x, 1]) ?? []
@@ -77,7 +84,7 @@ const apiRouteHandlers: APIRouteHandlerSpec = {
                 return res.send(createSuccessResponse<UsersPublicData>(userDocs.length === 0 ? "No user data found" : "User data found", { users: userDocs.map(userDoc => userDoc.toPublic()) }))
             },
             "POST": async ({ body }, res) => {
-                if (!userCreateValidator(body)) return res.status(400).send(createErrorResponse(processErrors(userCreateValidator.errors)))
+                if (!userCreateValidator(body)) return sendValidationError(res, userCreateValidator)
                 const { password, ...userInfo } = body
                 const passwordHash = await UserModel.hashPassword(password, userInfo.hashPreferences)
                 const user: User = { passwordHash, ...userInfo }
@@ -103,15 +110,15 @@ const apiRouteHandlers: APIRouteHandlerSpec = {
                     return res.send(createSuccessResponse<UserPublicData>("User data found", { user: userDoc.toPublic() }))
                 },
                 "PUT": async ({ params: { userId }, body, session }, res) => {
-                    if (session.userId !== userId) return res.status(401).send(createErrorResponse("Not authenticated"))
+                    if (!isAuthenticatedAsUser(session, userId)) return sendAuthenticationError(res)
                     return await putUserById(res, userId, body)
                 },
                 "PATCH": async ({ params: { userId }, body, session }, res) => {
-                    if (session.userId !== userId) return res.status(401).send(createErrorResponse("Not authenticated"))
+                    if (!isAuthenticatedAsUser(session, userId)) return sendAuthenticationError(res)
                     return await patchUserById(res, userId, body)
                 },
                 "DELETE": async ({ params: { userId }, session }, res) => {
-                    if (session.userId !== userId) return res.status(401).send(createErrorResponse("Not authenticated"))
+                    if (!isAuthenticatedAsUser(session, userId)) return sendAuthenticationError(res)
                     return await deleteUserById(res, userId)
                 }
             }
@@ -120,33 +127,33 @@ const apiRouteHandlers: APIRouteHandlerSpec = {
     "/profile": {
         methodHandlers: {
             "GET": async ({ session }, res) => {
-                if (session.userId === undefined) return res.status(401).send(createErrorResponse("Not authenticated"))
-                const userDoc = await UserModel.findById(session.userId)
+                if (!isAuthenticated(session)) return sendAuthenticationError(res)
+                const userDoc = await UserModel.findById(session.userId!)
                 if (!userDoc) return res.status(404).send(createErrorResponse("User not found"))
                 return res.send(createSuccessResponse<UserPrivateData>("User data found", { user: userDoc.toPrivate() }))
             },
             "PUT": async ({ body, session }, res) => {
-                if (session.userId === undefined) return res.status(401).send(createErrorResponse("Not authenticated"))
-                return await putUserById(res, session.userId, body)
+                if (!isAuthenticated(session)) return sendAuthenticationError(res)
+                return await putUserById(res, session.userId!, body)
             },
             "PATCH": async ({ body, session }, res) => {
-                if (session.userId === undefined) return res.status(401).send(createErrorResponse("Not authenticated"))
-                return await patchUserById(res, session.userId, body)
+                if (!isAuthenticated(session)) return sendAuthenticationError(res)
+                return await patchUserById(res, session.userId!, body)
             },
             "DELETE": async ({ session }, res) => {
-                if (session.userId === undefined) return res.status(401).send(createErrorResponse("Not authenticated"))
-                return await deleteUserById(res, session.userId)
+                if (!isAuthenticated(session)) return sendAuthenticationError(res)
+                return await deleteUserById(res, session.userId!)
             }
         }
     },
     "/auth": {
         methodHandlers: {
             "GET": async ({ session }, res) => {
-                if (session.userId === undefined) return res.status(401).send(createErrorResponse("Not authenticated"))
-                return res.send(createSuccessResponse<UserAuthenticateData>("Currently authenticated", { userId: session.userId }))
+                if (!isAuthenticated(session)) return sendAuthenticationError(res)
+                return res.send(createSuccessResponse<UserAuthenticateData>("Currently authenticated", { userId: session.userId! }))
             },
             "POST": async ({ body, session }, res) => {
-                if (!userAuthenticateValidator(body)) return res.status(400).send(createErrorResponse(processErrors(userAuthenticateValidator.errors)))
+                if (!userAuthenticateValidator(body)) return sendValidationError(res, userAuthenticateValidator)
                 const { identifier, password } = body
                 const user = await UserModel.findOne({ username: identifier }) ?? await UserModel.findOne({ email: identifier })
                 if (!user) return res.status(404).send(createErrorResponse("User not found"))
@@ -158,9 +165,9 @@ const apiRouteHandlers: APIRouteHandlerSpec = {
                 return res.send(createSuccessResponse<UserAuthenticateData>("Authenticated successfully", { userId: userId }))
             },
             "DELETE": async ({ session }, res) => {
-                if (session.userId === undefined) return res.status(401).send(createErrorResponse("Not authenticated"))
-                const userId = session.userId
-                session.userId = undefined
+                if (!isAuthenticated(session)) return sendAuthenticationError(res)
+                const userId = session.userId!
+                delete session.userId
                 return res.send(createSuccessResponse<UserAuthenticateData>("Unauthenticated successfully", { userId: userId }))
             }
         }
